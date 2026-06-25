@@ -1,0 +1,24 @@
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+*.cubin
+*.cuasm
+*.o
+.pytest_cache/
+
+# Compiled harnesses (build with make)
+harnesses/bench_harness
+harnesses/sass_test
+harnesses/encoder_harness
+harnesses/generic_harness
+harnesses/*.cubin
+harnesses/spill_*.cu
+
+# Kernel build artifacts
+kernels/**/*.cubin
+kernels/**/*.o
+
+# Specs with large binary data
+specs/*.cubin

@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sasskit"
+version = "0.1.0"
+description = "SASS Toolkit — post-compilation modification of NVIDIA CUDA binaries"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "sasskit contributors"},
+]
+keywords = ["cuda", "gpu", "sass", "register-allocation", "optimization", "nvidia", "blackwell"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: System :: Hardware",
+]
+dependencies = [
+    "pyelftools>=0.29",
+    "mip>=1.14",
+]
+# cubit (SM120 CUDA assembler) is a required runtime dependency but must be
+# installed separately: pip install -e /path/to/cubit
+# See: https://github.com/kacper-daftcode/cubit
+
+[project.optional-dependencies]
+forge = [
+    "anthropic>=0.20",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+]
+
+[project.scripts]
+sasskit = "sasskit.recolor.cli:main"
+
+[project.urls]
+Repository = "https://github.com/kacper-daftcode/sasskit"
+
+[tool.setuptools.packages.find]
+where = ["src"]

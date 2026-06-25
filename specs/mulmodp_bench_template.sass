@@ -1,0 +1,84 @@
+// MulModP benchmark kernel — standalone (compiled by cubit asm)
+//
+// Computes: a = a * b mod P  (loop 2^20 = 1048576 times)
+// P = secp256k1 prime = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+//
+// Register layout inside HOT LOOP:
+//   R8..R15   = a[0..7]  (input, overwritten with result each iteration)
+//   R16..R23  = b[0..7]  (constant multiplier — DO NOT WRITE)
+//   R24..R61  = scratch  (even-numbered for IMAD.WIDE destinations, max R60:R61)
+//
+// Loop mechanism: IADD3 R0 carry-predicate P1 at END of hot loop + 8 NOPs + @P1 BRA.
+//   - P1=1 when R0 > 0 (no underflow) → continue.
+//   - P1=0 when R0 underflows (was 0) → exit.
+//   - R0=0x0FFFFF gives exactly 2^20=1048576 total iterations.
+//   - P1 is NOT written by the hot loop (hot loop uses P0 for carry chains).
+//   - BRA reads P1 only 13 cycles after IADD3 R0 write → hardware scoreboard active.
+//
+.entry mulmodp_bench_kernel
+    .reg R0-R63
+    .param u64 a_ptr
+    .param u64 b_ptr
+
+    // Only thread 0 runs
+    S2R R0, SR_TID.X ;
+    ISETP.NE.AND P2, PT, R0, RZ, PT ;
+    @P2 EXIT ;
+
+    // Load params
+    LDCU.64 UR4, c[0x0][0x358] ;
+    LDC.64  R2, c[0x0][0x380] ;    // R2:R3 = a_ptr
+    LDC.64  R4, c[0x0][0x388] ;    // R4:R5 = b_ptr
+
+    // Load a[0..7] → R8..R15
+    LDG.E.64 R8,  desc[UR4][R2.64] ;
+    LDG.E.64 R10, desc[UR4][R2.64+0x8] ;
+    LDG.E.64 R12, desc[UR4][R2.64+0x10] ;
+    LDG.E.64 R14, desc[UR4][R2.64+0x18] ;
+
+    // Load b[0..7] → R16..R23 (constant, never changes)
+    LDG.E.64 R16, desc[UR4][R4.64] ;
+    LDG.E.64 R18, desc[UR4][R4.64+0x8] ;
+    LDG.E.64 R20, desc[UR4][R4.64+0x10] ;
+    LDG.E.64 R22, desc[UR4][R4.64+0x18] ;
+
+    MEMBAR.SC.GPU ;
+    // R0=0x0FFFFF: 1048575 iterations with P1=1 + 1 underflow with P1=0 = 1048576 total.
+    MOV R0, 0x0FFFFF ;
+
+loop_top:
+
+// HOT LOOP BEGIN
+// INPUT:  R8..R15  = a[0..7]   (read and overwrite with result)
+//         R16..R23 = b[0..7]   (constant — DO NOT WRITE)
+// OUTPUT: R8..R15  = result[0..7] = a*b mod P
+// SCRATCH: R24..R61  (even-numbered for IMAD.WIDE destinations, max R60:R61)
+// NOTE: Do NOT use R0 (loop counter), R1-R7 (reserved), R62, R63 (forbidden).
+// NOTE: Do NOT write P1 — it is the loop continuation predicate.
+// NOTE: P0 is freely usable for carry chains (IADD3/IADD3.X carry outputs).
+
+    // placeholder (AI replaces everything between HOT LOOP BEGIN and END)
+    MOV R8,  R8  ;
+    MOV R9,  R9  ;
+    MOV R10, R10 ;
+    MOV R11, R11 ;
+    MOV R12, R12 ;
+    MOV R13, R13 ;
+    MOV R14, R14 ;
+    MOV R15, R15 ;
+
+// HOT LOOP END
+
+    // Decrement loop counter. P1=carry: P1=1 when R0>0 (no underflow), P1=0 on underflow.
+    // Hot loop only uses P0 — never writes P1 — so P1 stays valid.
+    // LATENCY_CARRY_PRED_BRANCH=13: stall=5 on IADD3 + 8 NOPs = 13 cycles → BRA reads fresh P1.
+    IADD3 R0, P1, PT, R0, -0x1, RZ ;
+    NOP ; NOP ; NOP ; NOP ; NOP ; NOP ; NOP ; NOP ;
+    @P1 BRA loop_top ;
+
+    // Epilog: store result (R8..R15) back to a_ptr
+    STG.E.64 desc[UR4][R2.64],        R8 ;
+    STG.E.64 desc[UR4][R2.64+0x8],   R10 ;
+    STG.E.64 desc[UR4][R2.64+0x10],  R12 ;
+    STG.E.64 desc[UR4][R2.64+0x18],  R14 ;
+    EXIT ;
