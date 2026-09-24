@@ -130,3 +130,10 @@ def test_invalid_positions(tmp_path, block, index):
     binary, kernel, instructions, blocks = program(tmp_path)
     assert not rf.apply_mutation(binary, kernel, instructions, blocks,
                                  rf.Mutation(rf.MutationType.SWAP_ADJACENT, block, index))
+
+
+def test_cubit_schedule_annotation():
+    annotated = replace(move(), asm_text='MOV RZ, 0x1 /* @sched 0x007e4 */')
+    assert rf._can_swap(annotated, move(16, 2))
+    assert not rf._can_swap(replace(annotated, asm_text='MOV RZ, 0x1 /* @sched 0x007e1 */'), move(16, 2))
+    assert not rf._can_swap(replace(move(), asm_text='MOV RZ, 001'), move(16, 2))
