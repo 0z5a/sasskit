@@ -143,8 +143,9 @@ def test_exception_keeps_known_good_state(search, monkeypatch, failure):
                 raise RuntimeError('candidate decode failed')
             return decode_toy(program, name)
         monkeypatch.setattr(rf, 'decode_kernel', decoder)
-    with pytest.raises((RuntimeError, StopIteration)):
-        run([10], [0])
+    error = RuntimeError if failure == 'decode' else StopIteration
+    with pytest.raises(error):
+        run([10, 9] if failure == 'decode' else [10], [0])
     assert states[0].accepted == 0
     assert states[0].current_time_ms == 10
     assert [i.instr_word for i in states[0].instructions] == [1, 2, 3, 4]
@@ -169,3 +170,15 @@ def test_invalid_baseline_stops_before_mutations(search, value):
     with pytest.raises(ValueError, match='Baseline'):
         run([value], [0])
     assert seen == []
+
+
+def test_rejected_candidates_do_not_repeat_disassembly(search, monkeypatch):
+    run, seen, binaries, states, source = search
+    decoded = []
+    def decoder(program, name):
+        decoded.append(program.path)
+        return decode_toy(program, name)
+    monkeypatch.setattr(rf, 'decode_kernel', decoder)
+    state = run([10, 11, 12], [0, 0], temperature=0)
+    assert state.rejected == 2
+    assert decoded == [source]
