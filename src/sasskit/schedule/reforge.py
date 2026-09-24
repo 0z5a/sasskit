@@ -17,6 +17,7 @@ Pipeline per iteration:
 from __future__ import annotations
 
 import random
+import re
 import struct
 import subprocess
 import sys
@@ -28,6 +29,7 @@ from typing import Optional
 
 from sasskit.core.cubin import Cubin, KernelInfo
 from sasskit.core.decoder import Instruction, decode_kernel
+from sasskit.core.isa import build_ctrl
 
 try:
     import cubit as _cubit
@@ -110,25 +112,45 @@ def _has_waw_dep(first: Instruction, second: Instruction) -> bool:
     return bool(d1 & d2)
 
 
+def _is_discard_move(inst: Instruction) -> bool:
+    """Recognize only the audited SM120 MOV RZ, imm32 form.
+
+    A discard destination avoids live-register hazards with instructions outside
+    the pair. Live destinations need a scheduling model before admission.
+    Encoding: Cubit sm120 MOV_R_II (no modifiers); control layout: build_ctrl.
+    """
+    if inst.opcode != 'MOV' or inst.is_predicated or inst.predicate or inst.reg_refs:
+        return False
+    match = re.fullmatch(r'MOV RZ, (0x[0-9a-fA-F]+|[0-9]+)', inst.asm_text)
+    if match is None:
+        return False
+    immediate = int(match[1], 0)
+    if not 0 <= immediate <= 0xFFFFFFFF:
+        return False
+    if inst.instr_word != (immediate << 32) | (255 << 16) | 0x7802:
+        return False
+    # No reuse, wait mask, barrier assignment, or unexplained modifier bits.
+    stall = (inst.ctrl_word >> 41) & 15
+    return inst.ctrl_word in (
+        build_ctrl(stall=stall, yield_hint=True) | 0xF00,
+        build_ctrl(stall=stall, yield_hint=False) | 0xF00,
+    )
+
+
 def _can_swap(inst_a: Instruction, inst_b: Instruction) -> bool:
-    """Check if two adjacent instructions can be safely swapped."""
-    if _is_control(inst_a) or _is_control(inst_b):
-        return False
-    if inst_a.is_nop and inst_b.is_nop:
-        return False
-    if _has_raw_dep(inst_a, inst_b):
-        return False
-    if _has_war_dep(inst_a, inst_b):
-        return False
-    if _has_waw_dep(inst_a, inst_b):
-        return False
-    return True
+    """Allow only effect-free moves with identical scheduling controls.
+
+    GPR independence alone does not prove memory, predicate, or surrounding
+    latency dependencies. Other instruction forms are deliberately unsupported.
+    """
+    return (_is_discard_move(inst_a) and _is_discard_move(inst_b)
+            and inst_a.ctrl_word == inst_b.ctrl_word)
 
 
 def _get_block_instructions(instructions: list[Instruction],
                             block) -> list[Instruction]:
-    return [i for i in instructions
-            if block.start_offset <= i.code_offset <= block.end_offset]
+    # CFG end_offset is exclusive; the block already owns the exact slice.
+    return block.instructions
 
 
 # ============================================================================
@@ -200,25 +222,25 @@ def apply_mutation(cubin: Cubin, kernel: KernelInfo,
                    instructions: list[Instruction],
                    blocks: list, mutation: Mutation) -> bool:
     """Apply a mutation to the cubin binary. Returns True if applied."""
+    if not 0 <= mutation.block_idx < len(blocks):
+        return False
     blk = _get_block_instructions(instructions, blocks[mutation.block_idx])
     idx = mutation.instr_idx
+    if not 0 <= idx < len(blk):
+        return False
 
-    if mutation.kind == MutationType.SWAP_ADJACENT:
-        if idx + 1 >= len(blk):
+    if mutation.kind in (MutationType.SWAP_ADJACENT, MutationType.SWAP_LOAD_UP):
+        first = idx if mutation.kind == MutationType.SWAP_ADJACENT else idx - 1
+        if not 0 <= first < len(blk) - 1:
             return False
-        a, b = blk[idx], blk[idx + 1]
+        a, b = blk[first:first + 2]
+        if b.code_offset != a.code_offset + 16 or not _can_swap(a, b):
+            return False
         lo_a, hi_a = cubin.read_instruction(kernel, a.code_offset)
         lo_b, hi_b = cubin.read_instruction(kernel, b.code_offset)
-        cubin.write_instruction(kernel, a.code_offset, lo_b, hi_b)
-        cubin.write_instruction(kernel, b.code_offset, lo_a, hi_a)
-        return True
-
-    elif mutation.kind == MutationType.SWAP_LOAD_UP:
-        if idx < 1:
-            return False
-        a, b = blk[idx - 1], blk[idx]
-        lo_a, hi_a = cubin.read_instruction(kernel, a.code_offset)
-        lo_b, hi_b = cubin.read_instruction(kernel, b.code_offset)
+        if (lo_a, hi_a) != (a.instr_word, a.ctrl_word) or (
+                lo_b, hi_b) != (b.instr_word, b.ctrl_word):
+            return False  # The proposal's analysis no longer matches the bytes.
         cubin.write_instruction(kernel, a.code_offset, lo_b, hi_b)
         cubin.write_instruction(kernel, b.code_offset, lo_a, hi_a)
         return True
