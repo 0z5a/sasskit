@@ -177,4 +177,4 @@ def test_cli_defaults_and_options(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr('sys.argv', ['sasskit', 'reforge', '--help'])
     with pytest.raises(SystemExit, match='0'):
         cli.main()
-    assert 'reforge-results' in capsys.readouterr().out
+    assert 'reforge-results' in ''.join(capsys.readouterr().out.split())
