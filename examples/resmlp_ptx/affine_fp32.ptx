@@ -1,0 +1,41 @@
+.version 8.8
+.target sm_120
+.address_size 64
+// Match PyTorch addcmul's FP32 fused multiply-add rounding.
+.visible .entry affine_fp32(
+    .param .u64 x, .param .u64 y, .param .u64 alpha, .param .u64 beta,
+    .param .u32 n, .param .u32 channels) {
+    .reg .pred p;
+    .reg .b32 r<8>;
+    .reg .b64 d<12>;
+    .reg .f32 f<20>;
+    ld.param.u64 d0, [x];
+    ld.param.u64 d1, [y];
+    ld.param.u64 d2, [alpha];
+    ld.param.u64 d3, [beta];
+    ld.param.u32 r0, [n];
+    ld.param.u32 r1, [channels];
+    mov.u32 r2, %tid.x;
+    mov.u32 r3, %ctaid.x;
+    mad.lo.u32 r4, r3, 256, r2;
+    shl.b32 r4, r4, 2;
+    setp.ge.u32 p, r4, r0;
+    @p bra done;
+    rem.u32 r5, r4, 384;
+    mul.wide.u32 d4, r4, 4;
+    mul.wide.u32 d5, r5, 4;
+    add.u64 d6, d0, d4;
+    add.u64 d7, d1, d4;
+    add.u64 d8, d2, d5;
+    add.u64 d9, d3, d5;
+    ld.global.v4.f32 {f0, f1, f2, f3}, [d6];
+    ld.global.v4.f32 {f4, f5, f6, f7}, [d8];
+    ld.global.v4.f32 {f8, f9, f10, f11}, [d9];
+    fma.rn.f32 f16, f0, f4, f8;
+    fma.rn.f32 f17, f1, f5, f9;
+    fma.rn.f32 f18, f2, f6, f10;
+    fma.rn.f32 f19, f3, f7, f11;
+    st.global.v4.f32 [d7], {f16, f17, f18, f19};
+done:
+    ret;
+}
