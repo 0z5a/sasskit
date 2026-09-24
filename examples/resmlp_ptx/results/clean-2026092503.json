@@ -1,0 +1,52 @@
+{
+  "model": "timm/resmlp_12_224.fb_in1k",
+  "seed": 2026092503,
+  "revision": "59a4112ca93db165fd828bef7d47d758ad84295b",
+  "weight_sha256": "2ed399f6a787a30925f49bd3e8040e6b0f0a620ed68d56758c703e98bb7c0fbe",
+  "artifact_sha256": {
+    "affine_fp32.cubin": "410ae6ac04aa52735959fef9ecd05df65486c64263bce73b0385e6b5ed0242cb",
+    "affine_fp32.ptx": "1447d6ad4c7f8565978d2864b3a6b31155fa31c976739c54e96a9e161dfcc219",
+    "affine_tokens.cubin": "d049f9b9576fad6201e374dbdc4df70ee75e6ae4f9ce6f9e898cc6383289b808",
+    "affine_tokens.ptx": "0cb8ef1b33a00d6731cd36c4f4b2718003f2f3469457437b3b02d11e6630bd44",
+    "driver.cpp": "6d89d094ecd18eea9d471b2b620f24e8c83be96ccea320148b43cc5788fe1baa",
+    "driver.so": "d5af5c7b4c406459b3079c3fe2f2acc73a7c925572928602a5886c9c71fb3cdc",
+    "residual_channel.cubin": "364c146471a715bf38111cc0ecdd75aa727c38a40cec5f7aad8174afa004939d",
+    "residual_channel.ptx": "32ead3aae7751134378a012fe7fb5cd86dbf48d4a441422324782e8eb5e00a51",
+    "residual_token.cubin": "006c8473ba7fe66e644f41f1ed3146d8824401ad6d7b5dfab6c0b4c17f3138b6",
+    "residual_token.ptx": "8c7a61e994627f823b86aab2fe148539b586c89e2ba3883879c28483aee58c71"
+  },
+  "harness_sha256": "1d279f1093ee3dc6cf8557201d5e43221c2056700eba6663735e3c9d51fe1fef",
+  "torch": "2.13.0+cu130",
+  "timm": "1.0.29",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "uuid": "a015762a-f0d5-9065-109d-37898af80ecf",
+  "mode": "full CUDA graph replay",
+  "dtype": "FP32",
+  "batch": 2,
+  "affine_calls_per_forward": 25,
+  "residual_calls_per_forward": 24,
+  "bit_exact": true,
+  "output_sha256": "7424a2dac3ca66254997fe180514f5b4186431edaef999a5cb30ae3be6ec7cf1",
+  "rows": [
+    {
+      "arm": "native",
+      "event_ms": 1.0472169494628907,
+      "wall_ms": 1.230769359972328
+    },
+    {
+      "arm": "ptx",
+      "event_ms": 0.9989241790771485,
+      "wall_ms": 1.173177160017076
+    },
+    {
+      "arm": "ptx",
+      "event_ms": 0.9982294464111328,
+      "wall_ms": 1.1717749599847593
+    },
+    {
+      "arm": "native",
+      "event_ms": 1.0480982208251952,
+      "wall_ms": 1.2318387699997402
+    }
+  ]
+}
