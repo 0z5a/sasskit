@@ -1,0 +1,69 @@
+.version 8.8
+.target sm_120
+.address_size 64
+// Residual and next affine share a vector load; preserve each native rounding step.
+.visible .entry chain_token(
+    .param .u64 x, .param .u64 y, .param .u64 z, .param .u64 gamma,
+    .param .u64 branch, .param .u64 alpha, .param .u64 beta, .param .u32 n) {
+    .reg .pred p;
+    .reg .b32 r<8>;
+    .reg .b64 d<18>;
+    .reg .f32 f<26>;
+    ld.param.u64 d0, [x];
+    ld.param.u64 d1, [y];
+    ld.param.u64 d2, [gamma];
+    ld.param.u64 d3, [branch];
+    ld.param.u64 d11, [z];
+    ld.param.u64 d12, [alpha];
+    ld.param.u64 d13, [beta];
+    ld.param.u32 r0, [n];
+    mov.u32 r2, %tid.x;
+    mov.u32 r3, %ctaid.x;
+    mad.lo.u32 r4, r3, 256, r2;
+    shl.b32 r4, r4, 2;
+    setp.ge.u32 p, r4, r0;
+    @p bra done;
+    // Exact unsigned division: /196 then /384, with no reciprocal sequence.
+    mul.hi.u32 r5, r4, 0x5397829d;
+    shr.u32 r5, r5, 6;
+    mul.hi.u32 r6, r5, 0xaaaaaaab;
+    shr.u32 r6, r6, 8;
+    mul.lo.u32 r7, r5, 196;
+    sub.u32 r7, r4, r7;
+    mul.lo.u32 r2, r6, 384;
+    sub.u32 r5, r5, r2;
+    mul.lo.u32 r6, r6, 75264;
+    mul.wide.u32 d4, r4, 4;
+    mul.wide.u32 d5, r5, 4;
+    add.u64 d6, d0, d4;
+    add.u64 d7, d1, d4;
+    add.u64 d8, d2, d5;
+    add.u64 d9, d3, d4;
+    ld.global.v4.f32 {f0, f1, f2, f3}, [d6];
+    ld.global.f32 f4, [d8];
+    mov.f32 f5, f4;
+    mov.f32 f6, f4;
+    mov.f32 f7, f4;
+    ld.global.v4.f32 {f8, f9, f10, f11}, [d9];
+    mul.rn.f32 f12, f8, f4;
+    add.rn.f32 f16, f0, f12;
+    mul.rn.f32 f13, f9, f5;
+    add.rn.f32 f17, f1, f13;
+    mul.rn.f32 f14, f10, f6;
+    add.rn.f32 f18, f2, f14;
+    mul.rn.f32 f15, f11, f7;
+    add.rn.f32 f19, f3, f15;
+    st.global.v4.f32 [d7], {f16, f17, f18, f19};
+    add.u64 d14, d11, d4;
+    add.u64 d15, d12, d5;
+    add.u64 d16, d13, d5;
+    ld.global.f32 f20, [d15];
+    ld.global.f32 f21, [d16];
+    fma.rn.f32 f22, f16, f20, f21;
+    fma.rn.f32 f23, f17, f20, f21;
+    fma.rn.f32 f24, f18, f20, f21;
+    fma.rn.f32 f25, f19, f20, f21;
+    st.global.v4.f32 [d14], {f22, f23, f24, f25};
+done:
+    ret;
+}
