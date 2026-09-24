@@ -64,7 +64,7 @@ class Mutation:
 
 @dataclass
 class ReforgeState:
-    """State of the optimizer."""
+    """Current instructions/CFG and timing; best_time_ms describes the best file."""
     cubin_path: str
     kernel_name: str
     instructions: list[Instruction]
@@ -76,6 +76,7 @@ class ReforgeState:
     rejected: int = 0
     history: list[tuple[int, str, float]] = field(default_factory=list)
     best_cubin_path: str | None = None
+    generation: int = 0
 
 
 def _is_memory_load(inst: Instruction) -> bool:
@@ -419,6 +420,9 @@ def _reforge(cubin_path: str, kernel_name: str,
     if verbose:
         print(f"{baseline:.4f} ms/iter", file=sys.stderr)
 
+    if not math.isfinite(baseline) or baseline <= 0:
+        raise ValueError('Baseline benchmark must be finite and positive')
+
     state.best_time_ms = baseline
     state.current_time_ms = baseline
     temp = temperature
@@ -439,23 +443,17 @@ def _reforge(cubin_path: str, kernel_name: str,
         if mutation is None:
             continue
 
-        # Save bytes before mutation
-        blk = _get_block_instructions(instructions, blocks[mutation.block_idx])
-        saved = {}
-        for inst in blk:
-            lo, hi = cubin.read_instruction(kernel, inst.code_offset)
-            saved[inst.code_offset] = (lo, hi)
-
-        # Apply mutation
-        if not apply_mutation(cubin, kernel, instructions, blocks, mutation):
+        # Mutate a private candidate: rejection never changes current bytes.
+        candidate = Cubin.from_file(tmp_path)
+        candidate_kernel = candidate.get_kernel(kernel_name)
+        if not apply_mutation(candidate, candidate_kernel, instructions, blocks, mutation):
             continue
-
-        cubin.save(tmp_path)
+        candidate_path = Path(tmp_path).with_name('candidate.cubin')
+        candidate.save(candidate_path)
 
         # Quick crash test
-        if not gpu_test(tmp_path, kernel_name, bench_blocks, bench_threads,
+        if not gpu_test(str(candidate_path), kernel_name, bench_blocks, bench_threads,
                         bench_smem):
-            revert_mutation(cubin, kernel, instructions, blocks, mutation, saved)
             state.rejected += 1
             if verbose and iteration % 20 == 0:
                 print(f"  [{iteration}] {mutation.detail} → CRASH (reverted)",
@@ -463,8 +461,13 @@ def _reforge(cubin_path: str, kernel_name: str,
             continue
 
         # Benchmark
-        new_time = gpu_bench(tmp_path, kernel_name, bench_blocks,
+        new_time = gpu_bench(str(candidate_path), kernel_name, bench_blocks,
                              bench_threads, bench_smem)
+
+        if not math.isfinite(new_time) or new_time <= 0:
+            state.rejected += 1
+            temp *= cooling
+            continue
 
         # Accept/reject
         delta = new_time - state.current_time_ms
@@ -472,11 +475,24 @@ def _reforge(cubin_path: str, kernel_name: str,
         if delta < 0:
             accept = True
         elif temp > 0 and delta > 0:
-            import math
             prob = math.exp(-delta / (temp * state.best_time_ms + 1e-9))
             accept = random.random() < prob
 
         if accept:
+            # The decoder reads assembly from cubin.path, so reload the saved file
+            # before constructing the candidate's analysis snapshot.
+            candidate = Cubin.from_file(candidate_path)
+            candidate_kernel = candidate.get_kernel(kernel_name)
+            candidate_instructions = decode_kernel(candidate, kernel_name)
+            candidate_blocks = build_cfg(candidate_instructions)
+
+            # Promote bytes and analysis together, including SA non-best accepts.
+            os.replace(candidate_path, tmp_path)
+            candidate.path = Path(tmp_path)
+            cubin, kernel = candidate, candidate_kernel
+            instructions, blocks = candidate_instructions, candidate_blocks
+            state.instructions, state.blocks = instructions, blocks
+            state.generation += 1
             state.current_time_ms = new_time
             state.accepted += 1
             if new_time < state.best_time_ms:
@@ -489,7 +505,6 @@ def _reforge(cubin_path: str, kernel_name: str,
                       f"{new_time:.4f} ms ({speedup:.3f}x) ✓",
                       file=sys.stderr)
         else:
-            revert_mutation(cubin, kernel, instructions, blocks, mutation, saved)
             state.rejected += 1
 
         temp *= cooling
