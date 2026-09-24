@@ -1,0 +1,8 @@
+sssssss...........                                                       [100%]
+=============================== warnings summary ===============================
+tests/test_encoders.py:83
+  /home/gongji/0z5a/work/sasskit-sm120-20260924/a1/tests/test_encoders.py:83: PytestCollectionWarning: cannot collect test class 'TestResult' because it has a __init__ constructor (from: tests/test_encoders.py)
+    class TestResult:
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+11 passed, 7 skipped, 1 warning in 1.24s

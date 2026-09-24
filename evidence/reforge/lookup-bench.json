@@ -1,0 +1,86 @@
+[
+  {
+    "instructions": 128,
+    "unit": "ns/call",
+    "groups": [
+      {
+        "baseline": 5626.023,
+        "patched": 97.6283
+      },
+      {
+        "baseline": 5498.483,
+        "patched": 95.83388
+      },
+      {
+        "baseline": 5543.639999999999,
+        "patched": 96.08145999999999
+      },
+      {
+        "baseline": 5545.207,
+        "patched": 95.77247
+      },
+      {
+        "baseline": 5424.744,
+        "patched": 95.8176
+      }
+    ],
+    "baseline_count": 33,
+    "patched_count": 32
+  },
+  {
+    "instructions": 4096,
+    "unit": "ns/call",
+    "groups": [
+      {
+        "baseline": 164335.31,
+        "patched": 97.22377
+      },
+      {
+        "baseline": 167533.103,
+        "patched": 97.56932
+      },
+      {
+        "baseline": 203178.152,
+        "patched": 97.72912
+      },
+      {
+        "baseline": 164750.756,
+        "patched": 96.64869999999999
+      },
+      {
+        "baseline": 164756.196,
+        "patched": 99.30676
+      }
+    ],
+    "baseline_count": 1025,
+    "patched_count": 1024
+  },
+  {
+    "instructions": 65536,
+    "unit": "ns/call",
+    "groups": [
+      {
+        "baseline": 2976966.084,
+        "patched": 98.67439
+      },
+      {
+        "baseline": 2994827.438,
+        "patched": 99.58915999999999
+      },
+      {
+        "baseline": 2898510.34,
+        "patched": 98.13772
+      },
+      {
+        "baseline": 2884798.069,
+        "patched": 97.44297
+      },
+      {
+        "baseline": 2966164.474,
+        "patched": 96.91798
+      }
+    ],
+    "baseline_count": 16385,
+    "patched_count": 16384
+  }
+]

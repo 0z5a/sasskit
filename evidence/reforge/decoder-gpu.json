@@ -1,0 +1,162 @@
+{
+  "cuobjdump": {
+    "decode_cfg_ms": 673.9219119990594,
+    "offsets": [
+      16,
+      32
+    ],
+    "sha256": "d46dab3c54a6d16f419ce4d3f5ccc0708555746b5cc9cff95c2e173c45c59129",
+    "numeric": [
+      {
+        "numerically_correct": true,
+        "seed": 0,
+        "elements": 65536,
+        "event_us": 4.29344,
+        "uuid_hex": "a015762af0d59065109d37898af80ecf"
+      },
+      {
+        "numerically_correct": true,
+        "seed": 1,
+        "elements": 65536,
+        "event_us": 4.22976,
+        "uuid_hex": "a015762af0d59065109d37898af80ecf"
+      },
+      {
+        "numerically_correct": true,
+        "seed": 20260924,
+        "elements": 65536,
+        "event_us": 4.55936,
+        "uuid_hex": "a015762af0d59065109d37898af80ecf"
+      }
+    ],
+    "transaction": {
+      "proposals": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "accepted": 2,
+      "rejected": 1,
+      "oracle_runs": [
+        {
+          "numerically_correct": true,
+          "seed": 92024,
+          "elements": 65536,
+          "event_us": 4.31488,
+          "uuid_hex": "a015762af0d59065109d37898af80ecf"
+        },
+        {
+          "numerically_correct": true,
+          "seed": 92024,
+          "elements": 65536,
+          "event_us": 4.4576,
+          "uuid_hex": "a015762af0d59065109d37898af80ecf"
+        },
+        {
+          "numerically_correct": true,
+          "seed": 92024,
+          "elements": 65536,
+          "event_us": 4.95488,
+          "uuid_hex": "a015762af0d59065109d37898af80ecf"
+        },
+        {
+          "numerically_correct": true,
+          "seed": 92024,
+          "elements": 65536,
+          "event_us": 5.056,
+          "uuid_hex": "a015762af0d59065109d37898af80ecf"
+        }
+      ],
+      "decision_times_are_scripted": true
+    }
+  },
+  "cubit": {
+    "decode_cfg_ms": 629.1157340019708,
+    "offsets": [
+      16,
+      32
+    ],
+    "sha256": "d46dab3c54a6d16f419ce4d3f5ccc0708555746b5cc9cff95c2e173c45c59129",
+    "numeric": [
+      {
+        "numerically_correct": true,
+        "seed": 0,
+        "elements": 65536,
+        "event_us": 4.04704,
+        "uuid_hex": "a015762af0d59065109d37898af80ecf"
+      },
+      {
+        "numerically_correct": true,
+        "seed": 1,
+        "elements": 65536,
+        "event_us": 5.50688,
+        "uuid_hex": "a015762af0d59065109d37898af80ecf"
+      },
+      {
+        "numerically_correct": true,
+        "seed": 20260924,
+        "elements": 65536,
+        "event_us": 5.38272,
+        "uuid_hex": "a015762af0d59065109d37898af80ecf"
+      }
+    ],
+    "transaction": {
+      "proposals": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "accepted": 2,
+      "rejected": 1,
+      "oracle_runs": [
+        {
+          "numerically_correct": true,
+          "seed": 92024,
+          "elements": 65536,
+          "event_us": 5.00544,
+          "uuid_hex": "a015762af0d59065109d37898af80ecf"
+        },
+        {
+          "numerically_correct": true,
+          "seed": 92024,
+          "elements": 65536,
+          "event_us": 4.87328,
+          "uuid_hex": "a015762af0d59065109d37898af80ecf"
+        },
+        {
+          "numerically_correct": true,
+          "seed": 92024,
+          "elements": 65536,
+          "event_us": 5.09536,
+          "uuid_hex": "a015762af0d59065109d37898af80ecf"
+        },
+        {
+          "numerically_correct": true,
+          "seed": 92024,
+          "elements": 65536,
+          "event_us": 4.96864,
+          "uuid_hex": "a015762af0d59065109d37898af80ecf"
+        }
+      ],
+      "decision_times_are_scripted": true
+    }
+  }
+}
