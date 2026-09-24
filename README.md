@@ -84,6 +84,20 @@ sasskit analyze kernel.cubin -k MyKernel -t 64
 sasskit disassemble kernel.cubin -k MyKernel
 ```
 
+Each reforge call uses a private temporary workspace. The input is read-only;
+`--work-dir` selects the existing parent directory for temporary files. The best
+result is published outside that workspace and remains available after cleanup:
+
+```bash
+sasskit reforge kernel.cubin -k MyKernel -n 300 --work-dir /tmp -o best.cubin
+```
+
+Existing output files (including input aliases) are never overwritten. Without
+`-o`, each call creates `./reforge-results/<unique-run>/best.cubin`.
+Python callers can use the keyword-only `output_path` and `work_dir` arguments;
+`state.best_cubin_path` identifies the published result. A run with no accepted
+mutation publishes the baseline if its benchmark is valid.
+
 ## Architecture
 
 ```
