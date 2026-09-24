@@ -11,7 +11,11 @@ identity drop-path. Both variants keep the same pretrained weights and inputs.
 This is an explicit model experiment; its gains belong to the PTX consumer,
 separate from the reforge workspace/snapshot/swap correctness changes.
 
-## Independent results
+The stacked residual/affine fusion is described in [CHAIN_RESULTS.md](CHAIN_RESULTS.md).
+The current harness compares native, the original PTX path, and the fused path
+in separate CUDA Graphs with the same weights and input.
+
+## Original PTX results
 
 Fresh source export at `d9927c2` followed by a clean CUDA/C++ build, then five
 independent processes. Each process loads weights once, builds separate graph
@@ -61,6 +65,8 @@ CUDA_VISIBLE_DEVICES=<GPU-UUID> python examples/resmlp_ptx/model_e2e.py \
   --seed 2026092501 --output /absolute/path/result.json
 ```
 
-The script asserts the supported tensor layouts and that all 25 affine / 24
-residual calls entered the PTX path during graph capture. Changing model size,
+The script asserts supported layouts and PTX capture counts: 25 affine + 24
+residual launches for the original path, or 1 affine + 24 fused launches for the
+new path. It also checks eight kernel cases and all 24 model boundaries. Use
+`--validate-only` to run correctness checks without timing. Changing model size,
 dtype, training behavior or layout requires separate kernels and validation.

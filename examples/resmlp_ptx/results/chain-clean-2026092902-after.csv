@@ -1,0 +1,2 @@
+timestamp, uuid, temperature.gpu, clocks.current.sm [MHz], clocks.current.memory [MHz], power.draw [W], memory.used [MiB], utilization.gpu [%]
+2026/09/24 18:47:54.683, GPU-a015762a-f0d5-9065-109d-37898af80ecf, 34, 2917 MHz, 13801 MHz, 279.46 W, 19613 MiB, 0 %
