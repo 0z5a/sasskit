@@ -477,13 +477,6 @@ def _reforge(cubin_path: str, kernel_name: str,
         candidate_path = Path(tmp_path).with_name('candidate.cubin')
         candidate.save(candidate_path)
 
-        # The decoder reads assembly from cubin.path, so reload the saved file
-        # before constructing the candidate's analysis snapshot.
-        candidate = Cubin.from_file(candidate_path)
-        candidate_kernel = candidate.get_kernel(kernel_name)
-        candidate_instructions = decode_kernel(candidate, kernel_name)
-        candidate_blocks = build_cfg(candidate_instructions)
-
         # Quick crash test
         if not gpu_test(str(candidate_path), kernel_name, bench_blocks, bench_threads,
                         bench_smem):
@@ -512,6 +505,13 @@ def _reforge(cubin_path: str, kernel_name: str,
             accept = random.random() < prob
 
         if accept:
+            # The decoder reads assembly from cubin.path, so reload the saved file
+            # before constructing the candidate's analysis snapshot.
+            candidate = Cubin.from_file(candidate_path)
+            candidate_kernel = candidate.get_kernel(kernel_name)
+            candidate_instructions = decode_kernel(candidate, kernel_name)
+            candidate_blocks = build_cfg(candidate_instructions)
+
             # Promote bytes and analysis together, including SA non-best accepts.
             os.replace(candidate_path, tmp_path)
             candidate.path = Path(tmp_path)
