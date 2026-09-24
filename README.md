@@ -55,7 +55,15 @@ Reduces register pressure via graph coloring with spill-to-shared-memory trampol
 
 **Mutations:** instruction swap, load hoisting, stall ±1, NOP removal
 
-**Safety:** RAW/WAR/WAW dependency checking, crash detection before benchmarking
+**Swap scope:** only SM120 `MOV RZ, imm32` pairs with identical, explicitly
+recognized scheduling controls are admitted. These discard moves have no live
+register or memory effects. Memory/load hoisting, live GPR destinations,
+predicates, uniform registers, unknown forms and unsupported controls are
+rejected in both proposal and application. The current whitelist does not
+provide useful live-instruction scheduling optimizations: those require a model
+of surrounding latency/barrier dependencies. Stall/NOP mutations remain
+experimental and are not covered by this swap policy. Crash detection alone is
+not a numerical correctness check.
 
 **Speed:** ~1 second per iteration, 300 iterations = 5 minutes
 
