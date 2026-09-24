@@ -121,7 +121,7 @@ def _is_discard_move(inst: Instruction) -> bool:
     """
     if inst.opcode != 'MOV' or inst.is_predicated or inst.predicate or inst.reg_refs:
         return False
-    match = re.fullmatch(r'MOV RZ, (0x[0-9a-fA-F]+|[0-9]+)', inst.asm_text)
+    match = re.fullmatch(r'MOV RZ, (0x[0-9a-fA-F]+|0|[1-9][0-9]*)', inst.asm_text)
     if match is None:
         return False
     immediate = int(match[1], 0)
