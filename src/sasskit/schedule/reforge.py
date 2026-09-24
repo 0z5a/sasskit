@@ -16,7 +16,11 @@ Pipeline per iteration:
 
 from __future__ import annotations
 
+import math
+import os
 import random
+import shutil
+import tempfile
 import struct
 import subprocess
 import sys
@@ -71,6 +75,7 @@ class ReforgeState:
     accepted: int = 0
     rejected: int = 0
     history: list[tuple[int, str, float]] = field(default_factory=list)
+    best_cubin_path: str | None = None
 
 
 def _is_memory_load(inst: Instruction) -> bool:
@@ -311,6 +316,19 @@ MUTATION_GENERATORS = [
 ]
 
 
+def _publish_best(source: Path, output: Path) -> str:
+    """Publish complete bytes atomically without replacing an existing result."""
+    with tempfile.NamedTemporaryFile(dir=output.parent, prefix='.reforge-',
+                                     delete=False) as staging:
+        staging_path = Path(staging.name)
+    try:
+        shutil.copyfile(source, staging_path)
+        os.link(staging_path, output)
+    finally:
+        staging_path.unlink()
+    return str(output.absolute())
+
+
 def reforge(cubin_path: str, kernel_name: str,
             max_iters: int = 200,
             bench_blocks: int = 1, bench_threads: int = 256,
@@ -318,7 +336,50 @@ def reforge(cubin_path: str, kernel_name: str,
             temperature: float = 0.1,
             cooling: float = 0.995,
             seed: int = 42,
-            verbose: bool = True) -> ReforgeState:
+            verbose: bool = True, *,
+            output_path: str | Path | None = None,
+            work_dir: str | Path | None = None) -> ReforgeState:
+    """Optimize in a private workspace and return a durable, non-overwritten best.
+
+    ``work_dir`` is the parent of a unique temporary directory. By default,
+    results are published in ``./reforge-results/<unique-run>/best.cubin``.
+    Explicit output parents must already exist. Input files are never modified.
+    """
+    output = Path(output_path).absolute() if output_path is not None else None
+    if output is not None:
+        if output.resolve() == Path(cubin_path).resolve() or (
+                output.exists() and output.samefile(cubin_path)):
+            raise ValueError('Output must not alias the input cubin')
+        if output.exists():
+            raise FileExistsError(output)
+
+    with tempfile.TemporaryDirectory(prefix='reforge-', dir=work_dir) as workspace:
+        current = Path(workspace) / 'current.cubin'
+        best = Path(workspace) / 'best.cubin'
+        state = _reforge(cubin_path, kernel_name, max_iters, bench_blocks,
+                         bench_threads, bench_smem, temperature, cooling, seed,
+                         verbose, tmp_path=str(current), best_path=str(best))
+        if not math.isfinite(state.best_time_ms) or state.best_time_ms <= 0:
+            raise ValueError('No valid benchmark result to publish')
+        if output is None:
+            results = Path.cwd() / 'reforge-results'
+            results.mkdir(exist_ok=True)
+            output = Path(tempfile.mkdtemp(prefix='run-', dir=results)) / 'best.cubin'
+        state.best_cubin_path = _publish_best(best, output)
+    if verbose:
+        print(f"  Saved:    {state.best_cubin_path}", file=sys.stderr)
+    return state
+
+
+def _reforge(cubin_path: str, kernel_name: str,
+            max_iters: int = 200,
+            bench_blocks: int = 1, bench_threads: int = 256,
+            bench_smem: int = 28672,
+            temperature: float = 0.1,
+            cooling: float = 0.995,
+            seed: int = 42,
+            verbose: bool = True, *,
+            tmp_path: str, best_path: str) -> ReforgeState:
     """Run the SASS-to-SASS optimization loop.
 
     Args:
@@ -348,8 +409,6 @@ def reforge(cubin_path: str, kernel_name: str,
     )
 
     # Baseline benchmark
-    tmp_path = '/tmp/reforge_current.cubin'
-    best_path = '/tmp/reforge_best.cubin'
     cubin.save(tmp_path)
     cubin.save(best_path)
 
@@ -444,6 +503,5 @@ def reforge(cubin_path: str, kernel_name: str,
         print(f"  Baseline: {baseline:.4f} ms", file=sys.stderr)
         print(f"  Best:     {state.best_time_ms:.4f} ms "
               f"({speedup:.3f}x)", file=sys.stderr)
-        print(f"  Saved:    {best_path}", file=sys.stderr)
 
     return state

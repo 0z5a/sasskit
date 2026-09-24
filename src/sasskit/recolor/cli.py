@@ -297,6 +297,8 @@ def cmd_reforge(args: argparse.Namespace) -> int:
         bench_smem=args.smem,
         temperature=args.temperature,
         seed=args.seed,
+        output_path=args.output,
+        work_dir=args.work_dir,
     )
 
     return 0
@@ -761,6 +763,9 @@ def main() -> int:
     p_reforge.add_argument('--smem', type=int, default=28672)
     p_reforge.add_argument('--temperature', type=float, default=0.1)
     p_reforge.add_argument('--seed', type=int, default=42)
+    p_reforge.add_argument('-o', '--output',
+                           help='Output cubin (no overwrite; default: ./reforge-results/<unique-run>/best.cubin)')
+    p_reforge.add_argument('--work-dir', help='Parent directory for private temporary workspaces')
 
     # --- forge commands ---
     try:
